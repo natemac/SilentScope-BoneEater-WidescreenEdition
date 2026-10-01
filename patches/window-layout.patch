@@ -1,0 +1,51 @@
+diff --git a/src/spice2x/hooks/graphics/graphics.cpp b/src/spice2x/hooks/graphics/graphics.cpp
+--- a/src/spice2x/hooks/graphics/graphics.cpp
++++ b/src/spice2x/hooks/graphics/graphics.cpp
+@@ -38,6 +38,10 @@
+ #include "touch/native/nativetouchhook.h"
+ #include "util/time.h"
+ #include "rawinput/rawinput.h"
++
++#ifdef BONE_EATER_STANDALONE
++#include "render/window_layout.h"
++#endif
+ 
+ struct CaptureData {
+     std::shared_ptr<uint8_t[]> data;
+@@ -974,10 +978,16 @@
+         nHeight = rect.bottom - rect.top;
+     }
+ 
++#ifdef BONE_EATER_STANDALONE
++    // The two NDD auxiliaries have different render dimensions. Never force
++    // whichever window was created last into the generic 800x480 cabinet slot.
++    bone_eater::render::diagnosticWindowPlacement(hWnd, X, Y, nWidth, nHeight);
++#else
+     if (GRAPHICS_WINDOWED && NDD_SUBSCREEN_WINDOW && hWnd == NDD_SUBSCREEN_WINDOW) {
+         ndd_subscreen_size(hWnd, nWidth, nHeight);
+         ndd_subscreen_position(X, Y);
+     }
++#endif
+ 
+     // iidx windowed TDJ mode
+     if (GRAPHICS_WINDOWED && TDJ_SUBSCREEN_WINDOW && hWnd == TDJ_SUBSCREEN_WINDOW) {
+@@ -1121,6 +1131,11 @@
+ static BOOL WINAPI SetWindowPos_hook(HWND hWnd, HWND hWndInsertAfter,
+         int X, int Y, int cx, int cy, UINT uFlags) {
+ 
++#ifdef BONE_EATER_STANDALONE
++    if (bone_eater::render::diagnosticWindowPlacement(hWnd, X, Y, cx, cy)) {
++        uFlags &= ~(SWP_NOMOVE | SWP_NOSIZE);
++    }
++#else
+     if (GRAPHICS_WINDOWED && NDD_SUBSCREEN_WINDOW && hWnd == NDD_SUBSCREEN_WINDOW) {
+         if (!(uFlags & SWP_NOSIZE)) {
+             ndd_subscreen_size(hWnd, cx, cy);
+@@ -1129,6 +1144,7 @@
+             ndd_subscreen_position(X, Y);
+         }
+     }
++#endif
+ 
+     if (is_gfdm_two_head_small_window(hWnd) &&
+             ((uFlags & SWP_HIDEWINDOW) ||

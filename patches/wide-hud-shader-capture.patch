@@ -1,0 +1,19 @@
+--- a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_backend.cpp
++++ b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_backend.cpp
+@@ -31,6 +31,7 @@
+ #include <dxgi1_2.h>
+ 
+ #include "avs/game.h"
++#include "render/native_front_observer.h"
+ #include "d3d11_internal.h"
+ #include "util/nt_loader.h"
+ 
+@@ -67,6 +68,8 @@
+         pAdapter, DriverType, Software, Flags,
+         pFeatureLevels, FeatureLevels, SDKVersion,
+         pSwapChainDesc, ppSwapChain, ppDevice, pFeatureLevel, ppImmediateContext);
++    if (SUCCEEDED(res) && ppDevice && *ppDevice)
++        bone_eater::render::observeWideHudDevice(*ppDevice);
+     if (SUCCEEDED(res) && ppSwapChain && *ppSwapChain) {
+         if (pSwapChainDesc) {
+             d3d11_hooks::note_main_hwnd(pSwapChainDesc->OutputWindow);

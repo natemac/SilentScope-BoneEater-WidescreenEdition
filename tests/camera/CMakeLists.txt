@@ -1,0 +1,38 @@
+cmake_minimum_required(VERSION 3.16)
+project(BoneEaterCameraPolicyTests LANGUAGES CXX)
+
+enable_testing()
+
+add_library(bone_eater_camera_policy STATIC
+    ../../src/camera/vertical_pan_policy.cpp
+)
+target_include_directories(bone_eater_camera_policy PUBLIC ../../src)
+target_compile_features(bone_eater_camera_policy PUBLIC cxx_std_17)
+set_target_properties(bone_eater_camera_policy PROPERTIES CXX_EXTENSIONS OFF)
+
+add_executable(camera_policy_tests vertical_pan_policy_tests.cpp)
+target_link_libraries(camera_policy_tests PRIVATE bone_eater_camera_policy)
+add_executable(framing_math_tests framing_math_tests.cpp)
+target_link_libraries(framing_math_tests PRIVATE bone_eater_camera_policy)
+add_executable(main_fov_zoom_tests main_fov_zoom_tests.cpp)
+target_link_libraries(main_fov_zoom_tests PRIVATE bone_eater_camera_policy)
+add_executable(framing_transition_tests framing_transition_tests.cpp)
+target_link_libraries(framing_transition_tests PRIVATE bone_eater_camera_policy)
+if(MSVC)
+    target_compile_options(bone_eater_camera_policy PRIVATE /W4 /permissive-)
+    target_compile_options(camera_policy_tests PRIVATE /W4 /permissive-)
+    target_compile_options(framing_math_tests PRIVATE /W4 /permissive-)
+    target_compile_options(main_fov_zoom_tests PRIVATE /W4 /permissive-)
+    target_compile_options(framing_transition_tests PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(bone_eater_camera_policy PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(camera_policy_tests PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(framing_math_tests PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(main_fov_zoom_tests PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(framing_transition_tests PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_test(NAME camera_policy_tests COMMAND camera_policy_tests)
+add_test(NAME framing_math_tests COMMAND framing_math_tests)
+add_test(NAME main_fov_zoom_tests COMMAND main_fov_zoom_tests)
+add_test(NAME framing_transition_tests COMMAND framing_transition_tests)

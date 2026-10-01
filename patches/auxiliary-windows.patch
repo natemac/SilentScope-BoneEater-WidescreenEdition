@@ -1,0 +1,71 @@
+diff --git a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+--- a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
++++ b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+@@ -30,6 +30,7 @@
+ #ifdef BONE_EATER_STANDALONE
+ #include "render/d3d11_diagnostics.h"
+ #include "render/scope_compositor.h"
++#include "render/auxiliary_windows.h"
+ #endif
+ 
+ // --------------------------------------------------------------------------
+@@ -228,7 +229,11 @@
+         pump_frame(swapchain);
+         d3d11_hooks::udn::apply_present_policy(swapchain, SyncInterval);
+     }
+-    return Present_orig(swapchain, SyncInterval, Flags);
++    const HRESULT result = Present_orig(swapchain, SyncInterval, Flags);
++#ifdef BONE_EATER_STANDALONE
++    bone_eater::render::observeAuxiliaryPresentResult(swapchain, NDD_MAIN_WINDOW, Flags, result);
++#endif
++    return result;
+ }
+ 
+ HRESULT STDMETHODCALLTYPE Present1_hook(
+@@ -250,7 +255,11 @@
+         pump_frame(swapchain);
+         d3d11_hooks::udn::apply_present_policy(swapchain, SyncInterval);
+     }
+-    return Present1_orig(swapchain, SyncInterval, Flags, pParams);
++    const HRESULT result = Present1_orig(swapchain, SyncInterval, Flags, pParams);
++#ifdef BONE_EATER_STANDALONE
++    bone_eater::render::observeAuxiliaryPresentResult(swapchain, NDD_MAIN_WINDOW, Flags, result);
++#endif
++    return result;
+ }
+ 
+ HRESULT STDMETHODCALLTYPE ResizeBuffers_hook(
+diff --git a/src/spice2x/hooks/graphics/graphics.cpp b/src/spice2x/hooks/graphics/graphics.cpp
+--- a/src/spice2x/hooks/graphics/graphics.cpp
++++ b/src/spice2x/hooks/graphics/graphics.cpp
+@@ -41,6 +41,7 @@
+ 
+ #ifdef BONE_EATER_STANDALONE
+ #include "render/window_layout.h"
++#include "render/auxiliary_windows.h"
+ #include "render/d3d11_diagnostics.h"
+ #endif
+ 
+@@ -988,7 +989,9 @@
+ #ifdef BONE_EATER_STANDALONE
+     // The two NDD auxiliaries have different render dimensions. Never force
+     // whichever window was created last into the generic 800x480 cabinet slot.
+-    bone_eater::render::diagnosticWindowPlacement(hWnd, X, Y, nWidth, nHeight);
++    if (!bone_eater::render::auxiliaryWindowPlacement(hWnd, X, Y, nWidth, nHeight)) {
++        bone_eater::render::diagnosticWindowPlacement(hWnd, X, Y, nWidth, nHeight);
++    }
+ #else
+     if (GRAPHICS_WINDOWED && NDD_SUBSCREEN_WINDOW && hWnd == NDD_SUBSCREEN_WINDOW) {
+         ndd_subscreen_size(hWnd, nWidth, nHeight);
+@@ -1139,7 +1142,10 @@
+         int X, int Y, int cx, int cy, UINT uFlags) {
+ 
+ #ifdef BONE_EATER_STANDALONE
+-    if (bone_eater::render::diagnosticWindowPlacement(hWnd, X, Y, cx, cy)) {
++    if (bone_eater::render::auxiliaryWindowPlacement(hWnd, X, Y, cx, cy)) {
++        uFlags &= ~(SWP_NOMOVE | SWP_NOSIZE | SWP_HIDEWINDOW);
++        uFlags |= SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOOWNERZORDER;
++    } else if (bone_eater::render::diagnosticWindowPlacement(hWnd, X, Y, cx, cy)) {
+         uFlags &= ~(SWP_NOMOVE | SWP_NOSIZE);
+     }
+ #else

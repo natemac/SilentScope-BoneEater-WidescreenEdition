@@ -1,0 +1,18 @@
+--- a/src/spice2x/games/silentscope/silentscope.cpp
++++ b/src/spice2x/games/silentscope/silentscope.cpp
+@@ -12,6 +12,7 @@
+ #include "input/selected_hid_bridge.h"
+ #include "util/logging.h"
+ #include "render/native_display.h"
++#include "render/native_movie_fit.h"
+ #include "render/native_hud.h"
+ #include "render/native_rear_hud.h"
+ #include "render/native_reticle.h"
+@@ -36,6 +37,7 @@
+             log_info("selected-input", "selected HID start result {}", static_cast<int>(selected_start));
+         }
+         bone_eater::render::installNativeDisplayExperiment(GetModuleHandleW(L"gamendd.dll"));
++        bone_eater::render::installNativeMovieFit(GetModuleHandleW(L"gamendd.dll"));
+         bone_eater::input::installNativeAimObserver(
+             GetModuleHandleW(L"gamendd.dll"), GetModuleHandleW(L"arkndd.dll"));
+         bone_eater::camera::installNativeCameraObserver(GetModuleHandleW(L"gamendd.dll"));

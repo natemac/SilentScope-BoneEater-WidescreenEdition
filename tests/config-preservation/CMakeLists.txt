@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.20)
+project(BoneEaterConfigurationPreservationTests LANGUAGES CXX)
+if(NOT WIN32 OR NOT MSVC)
+    message(FATAL_ERROR "These isolated fixtures require Windows and MSVC.")
+endif()
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+enable_testing()
+add_executable(configuration_preservation_tests configuration_preservation_tests.cpp
+    ../../src/input/selected_hid_config.cpp ../../src/input/source_policy.cpp
+    ../../src/launcher/launcher_model.cpp ../../src/launcher/launcher_win32.cpp)
+target_include_directories(configuration_preservation_tests PRIVATE ../../src)
+target_include_directories(configuration_preservation_tests SYSTEM PRIVATE ../../vendor/spice2x/src/spice2x)
+target_compile_features(configuration_preservation_tests PRIVATE cxx_std_20)
+target_compile_options(configuration_preservation_tests PRIVATE /W4 /permissive- /EHsc /utf-8)
+target_link_libraries(configuration_preservation_tests PRIVATE shell32 bcrypt)
+add_test(NAME configuration_preservation_tests COMMAND configuration_preservation_tests)
+set_tests_properties(configuration_preservation_tests PROPERTIES TIMEOUT 20)

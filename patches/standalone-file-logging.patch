@@ -1,0 +1,28 @@
+diff --git a/src/spice2x/launcher/logger.cpp b/src/spice2x/launcher/logger.cpp
+--- a/src/spice2x/launcher/logger.cpp
++++ b/src/spice2x/launcher/logger.cpp
+@@ -87,7 +87,14 @@
+         }
+ 
+         // get terminal handle
++#ifdef BONE_EATER_STANDALONE
++        // Loaded game modules can close/reuse redirected standard handles.
++        // The standalone host retains its explicit LOG_FILE destination; do
++        // not risk console output being written into a recycled data handle.
++        HANDLE hTerminal = nullptr;
++#else
+         HANDLE hTerminal = GetStdHandle(STD_OUTPUT_HANDLE);
++#endif
+ 
+         if (logger::COLOR) {
+ 
+@@ -132,7 +139,9 @@
+             }
+ 
+             // write to console
++#ifndef BONE_EATER_STANDALONE
+             WriteFile(hTerminal, content.first.c_str(), content.first.size(), &result, nullptr);
++#endif
+ 
+             // write to file
+             if (LOG_FILE && LOG_FILE != INVALID_HANDLE_VALUE) {

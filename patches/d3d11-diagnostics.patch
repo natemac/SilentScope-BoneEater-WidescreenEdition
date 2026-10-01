@@ -1,0 +1,36 @@
+diff --git a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+--- a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
++++ b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+@@ -28,6 +28,10 @@
+ #include "hooks/graphics/graphics.h"
+ #include "util/utils.h"
+ 
++#ifdef BONE_EATER_STANDALONE
++#include "render/d3d11_diagnostics.h"
++#endif
++
+ // --------------------------------------------------------------------------
+ // overlay render bridge
+ 
+@@ -215,6 +219,10 @@ HRESULT STDMETHODCALLTYPE Present_hook(
+     if (!(Flags & DXGI_PRESENT_TEST)) {
+         d3d11_hooks::udn::schedule_window_attach(swapchain);
+         try_create_overlay(swapchain);
++#ifdef BONE_EATER_STANDALONE
++        bone_eater::render::observeD3D11Present(
++            swapchain, NDD_MAIN_WINDOW, SyncInterval, Flags, "Present");
++#endif
+         pump_frame(swapchain);
+         d3d11_hooks::udn::apply_present_policy(swapchain, SyncInterval);
+     }
+@@ -228,6 +236,10 @@ HRESULT STDMETHODCALLTYPE Present1_hook(
+     if (!(Flags & DXGI_PRESENT_TEST)) {
+         d3d11_hooks::udn::schedule_window_attach(swapchain);
+         try_create_overlay(swapchain);
++#ifdef BONE_EATER_STANDALONE
++        bone_eater::render::observeD3D11Present(
++            swapchain, NDD_MAIN_WINDOW, SyncInterval, Flags, "Present1");
++#endif
+         pump_frame(swapchain);
+         d3d11_hooks::udn::apply_present_policy(swapchain, SyncInterval);
+     }

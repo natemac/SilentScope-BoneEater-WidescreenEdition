@@ -1,0 +1,31 @@
+diff --git a/src/spice2x/hooks/graphics/graphics.cpp b/src/spice2x/hooks/graphics/graphics.cpp
+--- a/src/spice2x/hooks/graphics/graphics.cpp
++++ b/src/spice2x/hooks/graphics/graphics.cpp
+@@ -41,6 +41,7 @@
+ 
+ #ifdef BONE_EATER_STANDALONE
+ #include "render/window_layout.h"
++#include "render/d3d11_diagnostics.h"
+ #endif
+ 
+ struct CaptureData {
+@@ -728,6 +729,9 @@
+     HWND result = CreateWindowExA_orig(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight,
+             hWndParent, hMenu, hInstance, lpParam);
+     GRAPHICS_WINDOWS.push_back(result);
++#ifdef BONE_EATER_STANDALONE
++    bone_eater::render::registerD3D11Window(result, lpWindowName);
++#endif
+ 
+     // remember these windows now because full capture happens later during D3D
+     // initialization; placement calls before then can undo creation-time overrides
+@@ -889,6 +893,9 @@
+             dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight,
+             hWndParent, hMenu, hInstance, lpParam);
+     GRAPHICS_WINDOWS.push_back(result);
++#ifdef BONE_EATER_STANDALONE
++    bone_eater::render::registerD3D11Window(result, lpWindowName);
++#endif
+ 
+     // theme the native title bar (dark/light)
+     set_window_dark_titlebar(result);

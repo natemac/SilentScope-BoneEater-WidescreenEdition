@@ -1,0 +1,25 @@
+diff --git a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+--- a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
++++ b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+@@ -231,6 +231,10 @@
+     }
+     const HRESULT result = Present_orig(swapchain, SyncInterval, Flags);
+ #ifdef BONE_EATER_STANDALONE
++    if (FAILED(result)) {
++        bone_eater::render::observeD3D11PresentFailure(
++            swapchain, NDD_MAIN_WINDOW, SyncInterval, Flags, "Present", result);
++    }
+     bone_eater::render::observeAuxiliaryPresentResult(swapchain, NDD_MAIN_WINDOW, Flags, result);
+ #endif
+     return result;
+@@ -257,6 +261,10 @@
+     }
+     const HRESULT result = Present1_orig(swapchain, SyncInterval, Flags, pParams);
+ #ifdef BONE_EATER_STANDALONE
++    if (FAILED(result)) {
++        bone_eater::render::observeD3D11PresentFailure(
++            swapchain, NDD_MAIN_WINDOW, SyncInterval, Flags, "Present1", result);
++    }
+     bone_eater::render::observeAuxiliaryPresentResult(swapchain, NDD_MAIN_WINDOW, Flags, result);
+ #endif
+     return result;

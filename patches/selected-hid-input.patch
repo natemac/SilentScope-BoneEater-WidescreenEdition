@@ -1,0 +1,287 @@
+diff --git a/src/spice2x/acio/bmpu/bmpu.cpp b/src/spice2x/acio/bmpu/bmpu.cpp
+--- a/src/spice2x/acio/bmpu/bmpu.cpp
++++ b/src/spice2x/acio/bmpu/bmpu.cpp
+@@ -17,6 +17,7 @@
+ 
+ #ifdef BONE_EATER_STANDALONE
+ #include "input/aim_state.h"
++#include "input/selected_hid_bridge.h"
+ #endif
+ 
+ using namespace GameAPI;
+@@ -270,6 +271,14 @@
+     } else if (avs::game::is_model("R66")) {
+         buffer_len = 56;
+     } else if (avs::game::is_model("NDD")) {
++#ifdef BONE_EATER_STANDALONE
++        if (bone_eater::input::selectedHidExclusive()) {
++            // ARK calls this once after each successful hardware update. Resolve
++            // the entire selected gun tuple here, including while service state is frozen.
++            return bone_eater::input::copySelectedNddPacket(
++                buffer, STATUS_BUFFER, 56, NDD_MAIN_WINDOW);
++        }
++#endif
+         buffer_len = 56;
+     }
+ 
+@@ -376,6 +385,12 @@
+ 
+ static bool __cdecl ac_io_bmpu_update_control_status_buffer() {
+     unsigned int control_data = 0;
++#ifdef BONE_EATER_STANDALONE
++    // Only the selected NDD branch shares this lock with the fresh packet getter.
++    // It protects the service/menu cache; device start/stop never hold it.
++    auto selected_cache_lock = avs::game::is_model("NDD") && bone_eater::input::selectedHidExclusive()
++        ? bone_eater::input::lockSelectedNddServiceCache() : std::unique_lock<std::mutex>();
++#endif
+ 
+     // check freeze
+     if (STATUS_BUFFER_FREEZE) {
+@@ -527,6 +542,11 @@
+         if (Buttons::getState(RI_MGR, buttons.at(games::silentscope::Buttons::RIGHT))) {
+             STATUS_BUFFER[5] |= 0x10;
+         }
++#ifdef BONE_EATER_STANDALONE
++        // Selected ownership never mixes legacy mouse/API gun fields. The getter
++        // supplies a fresh coherent gun tuple even when this service cache is frozen.
++        if (bone_eater::input::selectedHidExclusive()) return true;
++#endif
+         const bool scope_right_held =
+             Buttons::getState(RI_MGR, buttons.at(games::silentscope::Buttons::SCOPE_RIGHT));
+         if (scope_right_held) {
+diff --git a/src/spice2x/api/modules/analogs.cpp b/src/spice2x/api/modules/analogs.cpp
+--- a/src/spice2x/api/modules/analogs.cpp
++++ b/src/spice2x/api/modules/analogs.cpp
+@@ -7,6 +7,11 @@
+ #include "games/io.h"
+ #include "util/utils.h"
+ #include "acio/mdxf/mdxf_poll.h"
++#ifdef BONE_EATER_STANDALONE
++#include "avs/game.h"
++#include "input/selected_hid_api.h"
++#include "input/selected_hid_api_status.h"
++#endif
+ 
+ using namespace std::placeholders;
+ using namespace rapidjson;
+@@ -18,6 +23,18 @@
+         functions["read"] = std::bind(&Analogs::read, this, _1, _2);
+         functions["write"] = std::bind(&Analogs::write, this, _1, _2);
+         functions["write_reset"] = std::bind(&Analogs::write_reset, this, _1, _2);
++#ifdef BONE_EATER_STANDALONE
++        functions["read_selected"] = [this](Request &, Response &res) {
++            if (!avs::game::is_model("NDD")) {
++                error(res, "selected input status is available only for NDD");
++                return;
++            }
++            const auto cached = bone_eater::input::readSelectedHidBridgeStatus();
++            auto value = bone_eater::input::selectedInputApiStatus(
++                cached, bone_eater::input::GunSourceClock::now(), res.doc()->GetAllocator());
++            res.add_data(value);
++        };
++#endif
+         analogs = games::get_analogs(eamuse_get_game());
+     }
+ 
+@@ -53,6 +70,21 @@
+         if (!analogs)
+             return;
+ 
++#ifdef BONE_EATER_STANDALONE
++        // Check the WHOLE request before the first override mutation. Reset is
++        // still allowed to clear inactive legacy overrides during cleanup.
++        if (avs::game::is_model("NDD") && bone_eater::input::selectedHidExclusive()) {
++            const auto ownership = bone_eater::input::preflightSelectedGunWrite(
++                req.params, bone_eater::input::SelectedGunApiFields::Analogs);
++            if (ownership != bone_eater::input::SelectedGunApiCheck::Allowed) {
++                error(res, ownership == bone_eater::input::SelectedGunApiCheck::GunOwned
++                    ? "selected HID owns gun input; entire request rejected"
++                    : "malformed selected-mode write request; entire request rejected");
++                return;
++            }
++        }
++#endif
++
+         // loop parameters
+         for (Value &param : req.params.GetArray()) {
+ 
+diff --git a/src/spice2x/api/modules/buttons.cpp b/src/spice2x/api/modules/buttons.cpp
+--- a/src/spice2x/api/modules/buttons.cpp
++++ b/src/spice2x/api/modules/buttons.cpp
+@@ -7,6 +7,11 @@
+ #include "games/io.h"
+ #include "util/utils.h"
+ #include "acio/mdxf/mdxf_poll.h"
++#ifdef BONE_EATER_STANDALONE
++#include "avs/game.h"
++#include "input/selected_hid_api.h"
++#include "input/selected_hid_api_status.h"
++#endif
+ 
+ using namespace std::placeholders;
+ using namespace rapidjson;
+@@ -18,6 +23,18 @@
+         functions["read"] = std::bind(&Buttons::read, this, _1, _2);
+         functions["write"] = std::bind(&Buttons::write, this, _1, _2);
+         functions["write_reset"] = std::bind(&Buttons::write_reset, this, _1, _2);
++#ifdef BONE_EATER_STANDALONE
++        functions["read_selected"] = [this](Request &, Response &res) {
++            if (!avs::game::is_model("NDD")) {
++                error(res, "selected input status is available only for NDD");
++                return;
++            }
++            const auto cached = bone_eater::input::readSelectedHidBridgeStatus();
++            auto value = bone_eater::input::selectedInputApiStatus(
++                cached, bone_eater::input::GunSourceClock::now(), res.doc()->GetAllocator());
++            res.add_data(value);
++        };
++#endif
+         buttons = games::get_buttons(eamuse_get_game());
+     }
+ 
+@@ -54,6 +71,21 @@
+             return;
+         }
+ 
++#ifdef BONE_EATER_STANDALONE
++        // Check the WHOLE request before the first override mutation. Reset is
++        // still allowed to clear inactive legacy overrides during cleanup.
++        if (avs::game::is_model("NDD") && bone_eater::input::selectedHidExclusive()) {
++            const auto ownership = bone_eater::input::preflightSelectedGunWrite(
++                req.params, bone_eater::input::SelectedGunApiFields::Buttons);
++            if (ownership != bone_eater::input::SelectedGunApiCheck::Allowed) {
++                error(res, ownership == bone_eater::input::SelectedGunApiCheck::GunOwned
++                    ? "selected HID owns gun input; entire request rejected"
++                    : "malformed selected-mode write request; entire request rejected");
++                return;
++            }
++        }
++#endif
++
+         // loop parameters
+         for (Value &param : req.params.GetArray()) {
+ 
+diff --git a/src/spice2x/games/silentscope/silentscope.cpp b/src/spice2x/games/silentscope/silentscope.cpp
+--- a/src/spice2x/games/silentscope/silentscope.cpp
++++ b/src/spice2x/games/silentscope/silentscope.cpp
+@@ -9,6 +9,8 @@
+ #ifdef BONE_EATER_STANDALONE
+ #include "camera/native_camera_hook.h"
+ #include "input/native_aim.h"
++#include "input/selected_hid_bridge.h"
++#include "util/logging.h"
+ #include "render/native_display.h"
+ #include "render/native_hud.h"
+ #include "render/native_rear_hud.h"
+@@ -27,6 +29,12 @@
+         // load the game DLL so hooks apply
+         libutils::try_library("gamendd.dll");
+ #ifdef BONE_EATER_STANDALONE
++        // No config means Legacy. A failed selected open remains selected and
++        // disarmed; it cannot silently switch to cursor/API gun input.
++        const auto selected_start = bone_eater::input::startSelectedHidBridge();
++        if (selected_start != bone_eater::input::SelectedHidRuntimeCommand::Legacy) {
++            log_info("selected-input", "selected HID start result {}", static_cast<int>(selected_start));
++        }
+         bone_eater::render::installNativeDisplayExperiment(GetModuleHandleW(L"gamendd.dll"));
+         bone_eater::input::installNativeAimObserver(
+             GetModuleHandleW(L"gamendd.dll"), GetModuleHandleW(L"arkndd.dll"));
+@@ -42,6 +50,9 @@
+     }
+ 
+     void SilentScopeGame::detach() {
++#ifdef BONE_EATER_STANDALONE
++        bone_eater::input::stopSelectedHidBridge();
++#endif
+         Game::detach();
+     }
+ }
+diff --git a/src/spice2x/launcher/shutdown.cpp b/src/spice2x/launcher/shutdown.cpp
+--- a/src/spice2x/launcher/shutdown.cpp
++++ b/src/spice2x/launcher/shutdown.cpp
+@@ -16,6 +16,9 @@
+ #include "logger.h"
+ #include "nvapi/nvapi.h"
+ #include "sdk/sdk.h"
++#ifdef BONE_EATER_STANDALONE
++#include "input/selected_hid_bridge.h"
++#endif
+ 
+ namespace launcher {
+ 
+@@ -25,6 +28,11 @@
+         // therefore, subsystems need to be guarded against multiple unload attempts
+         log_info("launcher", "stopping subsystems");
+ 
++#ifdef BONE_EATER_STANDALONE
++        // Shutdown can use TerminateProcess, bypassing atexit. Disarm first and
++        // request cancellation without delaying the forced-exit path.
++        bone_eater::input::stopSelectedHidBridge(std::chrono::milliseconds(0));
++#endif
+         sdk::fini_sdk_modules();
+ 
+         // stop dx11 background workers (poll thread, LDR notification)
+@@ -84,6 +92,7 @@
+         kill(exit_code);
+     }
+ 
++#ifndef BONE_EATER_STANDALONE
+     static void restart_spawn() {
+ 
+         // never do this twice
+@@ -107,7 +116,17 @@
+         }
+     }
+ 
++#endif
++
+     void restart() {
++#ifdef BONE_EATER_STANDALONE
++        // Upstream reconstructs only LAUNCHER_ARGV, losing consumed standalone
++        // flags. Spawning the full command before teardown also races the old
++        // process's API/EASRV ports. Until a parent-exit handoff is implemented,
++        // retain the current process/configuration instead of partially restarting.
++        log_warning("launcher", "standalone restart is unavailable; exit and relaunch with the same settings");
++        return;
++#else
+ 
+         // force restart after 1s
+         std::thread force_thread([] {
+@@ -125,5 +144,6 @@
+         // spawn new and terminate this process
+         restart_spawn();
+         launcher::kill(0);
++#endif
+     }
+ }
+diff --git a/src/spice2x/overlay/windows/acio_status_buffers.cpp b/src/spice2x/overlay/windows/acio_status_buffers.cpp
+--- a/src/spice2x/overlay/windows/acio_status_buffers.cpp
++++ b/src/spice2x/overlay/windows/acio_status_buffers.cpp
+@@ -1,6 +1,10 @@
+ #include "acio_status_buffers.h"
+ #include "overlay/imgui/extensions.h"
+ #include "external/imgui/imgui_memory_editor.h"
++#ifdef BONE_EATER_STANDALONE
++#include "avs/game.h"
++#include "input/selected_hid_bridge.h"
++#endif
+ 
+ 
+ namespace overlay::windows {
+@@ -27,6 +31,16 @@
+     }
+ 
+     void ACIOStatusBuffers::build_content() {
++#ifdef BONE_EATER_STANDALONE
++        // This debug editor writes cache and freeze fields without a cabinet
++        // transaction. Selected input keeps that path closed; its cached status
++        // remains available through the nonconsuming API read_selected method.
++        if (avs::game::is_model("NDD") && module->name == "BMPU" &&
++                bone_eater::input::selectedHidExclusive()) {
++            ImGui::TextUnformatted("Selected HID owns this NDD packet. Use buttons.read_selected for status.");
++            return;
++        }
++#endif
+ 
+         // freeze checkbox
+         if (module->status_buffer_freeze) {

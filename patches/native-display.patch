@@ -1,0 +1,24 @@
+diff --git a/src/spice2x/games/silentscope/silentscope.cpp b/src/spice2x/games/silentscope/silentscope.cpp
+--- a/src/spice2x/games/silentscope/silentscope.cpp
++++ b/src/spice2x/games/silentscope/silentscope.cpp
+@@ -6,6 +6,10 @@
+ 
+ #include "projector.h"
+ 
++#ifdef BONE_EATER_STANDALONE
++#include "render/native_display.h"
++#endif
++
+ namespace games::silentscope {
+ 
+     SilentScopeGame::SilentScopeGame() : Game("Silent Scope") {
+@@ -16,6 +20,9 @@
+ 
+         // load the game DLL so hooks apply
+         libutils::try_library("gamendd.dll");
++#ifdef BONE_EATER_STANDALONE
++        bone_eater::render::installNativeDisplayExperiment(GetModuleHandleW(L"gamendd.dll"));
++#endif
+ 
+         devicehook_init();
+         devicehook_add(new ProjectorHandle());

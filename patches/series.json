@@ -1,0 +1,25 @@
+{
+  "patches": [
+    "d3d11-diagnostics.patch",
+    "loopback-api.patch",
+    "window-layout.patch",
+    "aim-state.patch",
+    "window-registration.patch",
+    "api-ndd-null-lights.patch",
+    "scope-compositor.patch",
+    "standalone-file-logging.patch",
+    "native-display.patch",
+    "native-aim.patch",
+    "native-camera-hook.patch",
+    "native-hud.patch",
+    "native-rear-hud.patch",
+    "native-reticle.patch",
+    "auxiliary-windows.patch",
+    "present-failure-diagnostics.patch",
+    "selected-hid-input.patch",
+    "standalone-restart-api.patch",
+    "native-movie-fit.patch",
+    "native-window-exit.patch",
+    "wide-hud-shader-capture.patch"
+  ]
+}

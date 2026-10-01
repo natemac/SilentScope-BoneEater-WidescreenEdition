@@ -1,0 +1,9 @@
+{
+  "upstream": {
+    "repository": "https://github.com/spice2x/spice2x.github.io.git",
+    "commit": "7aba7da3b67f3e4c8b0e950f306bd044d69fa494",
+    "source": "vendor/spice2x/src/spice2x",
+    "state": "vendored with integration changes already applied; do not reapply patches"
+  },
+  "build": "20260930.2"
+}

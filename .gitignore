@@ -1,0 +1,7 @@
+/build/
+/game/
+/runtime/
+*.log
+*.dmp
+__pycache__/
+*.pyc

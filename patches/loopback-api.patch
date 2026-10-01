@@ -1,0 +1,45 @@
+--- a/src/spice2x/api/controller.cpp
++++ b/src/spice2x/api/controller.cpp
+@@ -87,7 +87,12 @@
+     sockaddr_in server_address{};
+     server_address.sin_family = AF_INET;
+     server_address.sin_port = htons(this->port);
++#ifdef BONE_EATER_STANDALONE
++    // Development control endpoints are accessible only on this machine.
++    server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
++#else
+     server_address.sin_addr.s_addr = INADDR_ANY;
++#endif
+     memset(&server_address.sin_zero, 0, sizeof(server_address.sin_zero));
+ 
+     // bind socket to address
+--- a/src/spice2x/api/websocket.cpp
++++ b/src/spice2x/api/websocket.cpp
+@@ -340,7 +340,12 @@
+ 
+         sockaddr_in address {};
+         address.sin_family = AF_INET;
++#ifdef BONE_EATER_STANDALONE
++        // Development control endpoints are accessible only on this machine.
++        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
++#else
+         address.sin_addr.s_addr = INADDR_ANY;
++#endif
+         address.sin_port = htons(this->port);
+ 
+         if (bind(this->listener, reinterpret_cast<sockaddr *>(&address), sizeof(address))
+--- a/src/spice2x/api/stream_server.cpp
++++ b/src/spice2x/api/stream_server.cpp
+@@ -261,7 +261,12 @@
+         sockaddr_in server_address {};
+         server_address.sin_family = AF_INET;
+         server_address.sin_port = htons(this->port);
++#ifdef BONE_EATER_STANDALONE
++        // Development control endpoints are accessible only on this machine.
++        server_address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
++#else
+         server_address.sin_addr.s_addr = INADDR_ANY;
++#endif
+ 
+         if (bind(this->listener, (sockaddr *) &server_address, sizeof(sockaddr)) == -1) {
+             log_warning("api::stream", "could not bind socket on port {}: {}",

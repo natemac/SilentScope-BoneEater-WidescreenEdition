@@ -1,0 +1,19 @@
+diff --git a/src/spice2x/games/silentscope/silentscope.cpp b/src/spice2x/games/silentscope/silentscope.cpp
+--- a/src/spice2x/games/silentscope/silentscope.cpp
++++ b/src/spice2x/games/silentscope/silentscope.cpp
+@@ -7,6 +7,7 @@
+ #include "projector.h"
+ 
+ #ifdef BONE_EATER_STANDALONE
++#include "camera/native_camera_hook.h"
+ #include "input/native_aim.h"
+ #include "render/native_display.h"
+ #endif
+@@ -24,6 +25,7 @@
+         bone_eater::render::installNativeDisplayExperiment(GetModuleHandleW(L"gamendd.dll"));
+         bone_eater::input::installNativeAimObserver(
+             GetModuleHandleW(L"gamendd.dll"), GetModuleHandleW(L"arkndd.dll"));
++        bone_eater::camera::installNativeCameraObserver(GetModuleHandleW(L"gamendd.dll"));
+ #endif
+ 
+         devicehook_init();

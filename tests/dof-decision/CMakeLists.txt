@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.20)
+project(BoneEaterDofDecisionTests LANGUAGES CXX ASM_MASM)
+if(NOT MSVC OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "The native DOF register fixtures require MSVC x64")
+endif()
+enable_testing()
+add_executable(dof_decision_tests dof_decision_tests.cpp stub_fixture.asm
+    ../../src/render/native_dof_stubs.asm)
+target_include_directories(dof_decision_tests PRIVATE ../../src)
+target_compile_features(dof_decision_tests PRIVATE cxx_std_20)
+target_compile_options(dof_decision_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/W4;/EHsc;/utf-8>)
+add_test(NAME dof_decision_tests COMMAND dof_decision_tests)

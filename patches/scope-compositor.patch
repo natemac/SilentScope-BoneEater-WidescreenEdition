@@ -1,0 +1,31 @@
+diff --git a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+--- a/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
++++ b/src/spice2x/hooks/graphics/backends/d3d11/d3d11_swapchain.cpp
+@@ -29,6 +29,7 @@
+ 
+ #ifdef BONE_EATER_STANDALONE
+ #include "render/d3d11_diagnostics.h"
++#include "render/scope_compositor.h"
+ #endif
+ 
+ // --------------------------------------------------------------------------
+@@ -220,6 +221,7 @@
+         d3d11_hooks::udn::schedule_window_attach(swapchain);
+         try_create_overlay(swapchain);
+ #ifdef BONE_EATER_STANDALONE
++        bone_eater::render::composeScopeD3D11Present(swapchain, NDD_MAIN_WINDOW, Flags);
+         bone_eater::render::observeD3D11Present(
+             swapchain, NDD_MAIN_WINDOW, SyncInterval, Flags, "Present");
+ #endif
+@@ -237,6 +239,11 @@
+         d3d11_hooks::udn::schedule_window_attach(swapchain);
+         try_create_overlay(swapchain);
+ #ifdef BONE_EATER_STANDALONE
++        // Prototype composes whole frames; partial/scroll presents require a
++        // separately tested damage-region policy before drawing outside them.
++        if (!pParams || (pParams->DirtyRectsCount == 0 && !pParams->pScrollRect)) {
++            bone_eater::render::composeScopeD3D11Present(swapchain, NDD_MAIN_WINDOW, Flags);
++        }
+         bone_eater::render::observeD3D11Present(
+             swapchain, NDD_MAIN_WINDOW, SyncInterval, Flags, "Present1");
+ #endif

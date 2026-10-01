@@ -1,0 +1,14 @@
+--- a/src/spice2x/api/modules/lights.cpp
++++ b/src/spice2x/api/modules/lights.cpp
+@@ -21,6 +21,11 @@
+         functions["write_reset"] = std::bind(&Lights::write_reset, this, _1, _2);
+ 
+         this->lights = games::get_lights(eamuse_get_game());
++        // Some games, including NDD, have no registered light outputs.
++        // Keep the module empty, matching the guards in its API operations.
++        if (!this->lights) {
++            return;
++        }
+         for (auto &light : *this->lights) {
+             this->lights_by_names.emplace(light.getName(), light);
+         }

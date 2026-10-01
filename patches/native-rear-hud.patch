@@ -1,0 +1,19 @@
+diff --git a/src/spice2x/games/silentscope/silentscope.cpp b/src/spice2x/games/silentscope/silentscope.cpp
+--- a/src/spice2x/games/silentscope/silentscope.cpp
++++ b/src/spice2x/games/silentscope/silentscope.cpp
+@@ -11,6 +11,7 @@
+ #include "input/native_aim.h"
+ #include "render/native_display.h"
+ #include "render/native_hud.h"
++#include "render/native_rear_hud.h"
+ #endif
+ 
+ namespace games::silentscope {
+@@ -29,6 +30,7 @@
+             GetModuleHandleW(L"gamendd.dll"), GetModuleHandleW(L"arkndd.dll"));
+         bone_eater::camera::installNativeCameraObserver(GetModuleHandleW(L"gamendd.dll"));
+         bone_eater::render::installNativeHudFit(GetModuleHandleW(L"gamendd.dll"));
++        bone_eater::render::installNativeRearHudFit(GetModuleHandleW(L"gamendd.dll"));
+ #endif
+ 
+         devicehook_init();

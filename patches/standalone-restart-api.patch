@@ -1,0 +1,18 @@
+diff --git a/src/spice2x/api/modules/control.cpp b/src/spice2x/api/modules/control.cpp
+--- a/src/spice2x/api/modules/control.cpp
++++ b/src/spice2x/api/modules/control.cpp
+@@ -90,8 +90,14 @@
+      */
+     void Control::restart(Request &req, Response &res) {
+ 
++#ifdef BONE_EATER_STANDALONE
++        // The standalone launcher intentionally retains this process until a
++        // reliable parent-exit restart handoff exists. Report that to API clients.
++        return error(res, "Standalone restart is unavailable; exit and relaunch with the same settings.");
++#else
+         // restart launcher
+         launcher::restart();
++#endif
+     }
+ 
+     /**

@@ -1,0 +1,20 @@
+--- a/src/spice2x/hooks/graphics/graphics.cpp
++++ b/src/spice2x/hooks/graphics/graphics.cpp
+@@ -43,6 +43,7 @@
+ #include "render/window_layout.h"
+ #include "render/auxiliary_windows.h"
+ #include "render/d3d11_diagnostics.h"
++#include "render/native_window_exit.h"
+ #endif
+ 
+ struct CaptureData {
+@@ -807,6 +808,9 @@
+ 
+     if (is_ndd_main_window) {
+         NDD_MAIN_WINDOW = result;
++#ifdef BONE_EATER_STANDALONE
++        bone_eater::render::installNativeMainWindowExit(result, [] { launcher::shutdown(0); });
++#endif
+     }
+ 
+     disable_touch_gestures(result);
