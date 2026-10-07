@@ -24,6 +24,60 @@ Use mouse-compatible lightgun output. Left mouse fires; right mouse or Enter con
 
 First launch backs up the copied calibration XML/CRC to `game/desktop/calibration-initialization-r3` and initializes full-range values. Your original game folder and lightgun driver calibration remain untouched. Later launches preserve calibration changes. Do not recopy the original `conf` over an initialized installation: that can restore the old cabinet calibration.
 
+## launch-settings.json
+
+Edit `launch-settings.json` beside **Bone Eater WS-Edition.exe** to customize the view and scope. Close the game, save the file, then launch again: settings are read at startup. These are the values shipped with this release:
+
+```json
+{
+  "schema_version": 1,
+  "view": "balanced125",
+  "main_dof_off": false,
+  "input_profile": null,
+  "scope": {
+    "mode": "toggle_hold",
+    "bindings": ["ENTER", "RBUTTON"],
+    "hold_ms": 250,
+    "low_gain": 0.25,
+    "high_gain": 0.1,
+    "low_smoothing_ms": 35,
+    "high_smoothing_ms": 55,
+    "shape": "angled"
+  }
+}
+```
+
+### View and input
+
+| Setting | Shipped value | What it does |
+|---|---|---|
+| `schema_version` | `1` | Settings-file format version. Leave this at `1`; it is not the game build number. |
+| `view` | `"balanced125"` | Main-view framing. Choose `"balanced125"` for the standard view or `"closer150"` for a tighter, closer view. |
+| `main_dof_off` | `false` | Keeps the game's main-view depth-of-field blur. Set to `true` to disable that blur. |
+| `input_profile` | `null` | Uses normal mouse-compatible input without a custom device profile. Advanced users can supply a path to an input-profile JSON file; most mouse/lightgun users should leave this as `null`. This is not the cabinet calibration file. |
+| `scope` | Object shown above | Groups the scope appearance and control settings described below. |
+
+For a custom `input_profile`, relative paths start inside the `game` folder, not beside the launcher. Absolute paths also work. Use forward slashes in JSON paths (for example, `"C:/Profiles/my-input.json"`) or escape each backslash as `\\`.
+
+### Scope
+
+| Setting inside `scope` | Shipped value | What it does |
+|---|---|---|
+| `mode` | `"toggle_hold"` | Tap to toggle the scope on/off. Hold for higher magnification; release returns to lower magnification. `"legacy"` uses the original scope-control behavior instead of this tap/hold controller. |
+| `bindings` | `["ENTER", "RBUTTON"]` | Buttons that operate the tap/hold scope control. Either Enter **or** right mouse works; these are alternatives, not a combination. A lightgun button can be mapped to one of these inputs. |
+| `hold_ms` | `250` | How long to hold before higher magnification engages, in milliseconds. Smaller values engage it sooner. Accepts whole numbers from `100` to `1000`. |
+| `low_gain` | `0.25` | Scoped aiming sensitivity at lower magnification. Lower values give slower, finer movement; higher values give faster movement. Accepts values greater than `0` through `1`. |
+| `high_gain` | `0.1` | Scoped aiming sensitivity at higher magnification, with the same range as `low_gain`. This changes movement sensitivity, not the zoom amount. |
+| `low_smoothing_ms` | `35` | Aiming smoothing at lower magnification. Higher values reduce jitter but make movement feel less immediate. Accepts `0`–`250` milliseconds; `0` disables added smoothing. |
+| `high_smoothing_ms` | `55` | Aiming smoothing at higher magnification, with the same range and tradeoff. |
+| `shape` | `"angled"` | Lens outline: `"angled"` uses the shaped rectangular lens; `"circle"` uses a circular lens. This changes the visual mask, not calibration or magnification. |
+
+Bindings accept 1–8 distinct uppercase names: `ENTER`, `SPACE`, `LBUTTON` (left mouse), `RBUTTON` (right mouse), `MBUTTON` (middle mouse), `XBUTTON1`/`XBUTTON2` (extra mouse buttons), or a single `A`–`Z` or `0`–`9`. Left mouse normally fires, so choosing `LBUTTON` for scope would share that trigger.
+
+For a first adjustment, change just one setting: try `"circle"` to compare lens shapes, reduce a gain for finer scoped aiming, or reduce smoothing for a more immediate response. Keep a copy of the original settings. The guide above covers every field in the shipped file; optional advanced adaptive aiming is not enabled in that file.
+
+Use valid JSON: double quotes around names/text, lowercase `true`/`false`/`null`, and no comments or trailing commas. Unknown names, duplicate settings and out-of-range values are rejected. Keep the full example when editing rather than deleting settings to reset them: omitted scope fields can use different fallback values.
+
 ## Known bugs and limits
 
 - **Intermittent extra scope window:** one test session flickered and displayed the original scope window in the upper-right alongside the moving lens. Restarting resolved it. The cause is not yet confirmed; no mid-game reset shortcut is included. If it recurs, save `game/desktop/game.log` before restarting and include it in a bug report.
