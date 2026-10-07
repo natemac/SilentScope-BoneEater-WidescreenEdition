@@ -26,7 +26,7 @@ First launch backs up the copied calibration XML/CRC to `game/desktop/calibratio
 
 ## launch-settings.json
 
-Edit `launch-settings.json` beside **Bone Eater WS-Edition.exe** to customize the view and scope. Close the game, save the file, then launch again: settings are read at startup. These are the values shipped with this release:
+Edit `launch-settings.json` beside **Bone Eater WS-Edition.exe** to customize the view and scope. Close the game, save the file, then launch again: settings are read at startup. **The values below are the shipped defaults and recommended starting settings for Widescreen Edition**, including mouse-compatible lightguns. Sensitivity and smoothing can be tuned to your hardware and preference.
 
 ```json
 {
@@ -46,6 +46,25 @@ Edit `launch-settings.json` beside **Bone Eater WS-Edition.exe** to customize th
   }
 }
 ```
+
+### Recommended defaults versus original arcade behavior
+
+**There is no complete original-arcade preset in this JSON.** The launcher keeps the single-screen widescreen layout, aiming fixes and other edition changes enabled. The original cabinet used a separate scope display and portrait main display, so its layout and calibration cannot be restored by selecting a scope shape or control mode.
+
+| Setting | Default / recommended for this edition | Original arcade comparison |
+|---|---|---|
+| `schema_version` | `1` | Launcher file format only; no arcade equivalent. |
+| `view` | `"balanced125"` | Both available choices are widescreen framing presets. Neither restores the original portrait camera/layout; there is no `"original"` value. |
+| `main_dof_off` | `false` | Preserves the game's native main-view depth-of-field behavior. This is also the choice for original blur behavior. |
+| `input_profile` | `null` | Desktop mouse/lightgun input is an adaptation. An original cabinet gun/calibration setup is not a selectable profile in this file. |
+| `scope.mode` | `"toggle_hold"` | `"legacy"` leaves scope control to the original game path instead of the added tap/hold controller. It does not recreate the cabinet's physical scope hardware. |
+| `scope.bindings` | `["ENTER", "RBUTTON"]` | Desktop bindings for the added controller, not original cabinet button settings. They do not configure that controller when mode is `"legacy"`. |
+| `scope.hold_ms` | `250` | Added tap/hold threshold; no original arcade value. Unused by the added controller in `"legacy"` mode. |
+| `scope.low_gain` / `scope.high_gain` | `0.25` / `0.1` | Added scoped-motion tuning for `"toggle_hold"`; these are not measured original cabinet sensitivity values. `"legacy"` bypasses that tuning path. |
+| `scope.low_smoothing_ms` / `scope.high_smoothing_ms` | `35` / `55` | Added scoped-motion smoothing for `"toggle_hold"`; no equivalent original cabinet values are provided. `"legacy"` bypasses that tuning path. |
+| `scope.shape` | `"angled"` | Approximates the original scope display's shaped rectangular outline. `"circle"` is an alternative presentation, not an original-arcade preset. Both remain composited desktop lenses. |
+
+**To compare native scope controls:** keep the full default file above, change only `scope.mode` to `"legacy"`, and restart. Keep `main_dof_off` at `false` and `scope.shape` at `"angled"` for native blur and the arcade-inspired lens outline. This is a control comparison within Widescreen Edition, not a complete cabinet restoration. Change the mode back to `"toggle_hold"` to return to the recommended desktop controls. Do not restore old cabinet calibration files for this comparison.
 
 ### View and input
 
