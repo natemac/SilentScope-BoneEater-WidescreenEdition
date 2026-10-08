@@ -1,4 +1,7 @@
 #include "calibration.h"
+#include "player_data.h"
+#include "display.h"
+#include "../platform/dpi.h"
 #include "launcher.h"
 #include <shellapi.h>
 #include <fstream>
@@ -31,7 +34,7 @@ std::filesystem::path logPath(const std::filesystem::path& game) {
     name << L"launcher-" << now.wYear << L'-' << std::setfill(L'0') << std::setw(2) << now.wMonth
          << L'-' << std::setw(2) << now.wDay << L'-' << std::setw(2) << now.wHour << std::setw(2) << now.wMinute
          << std::setw(2) << now.wSecond << L'-' << GetCurrentProcessId() << L".log";
-    return game.parent_path() / L"desktop" / name.str();
+    return playerDataDirectory(game) / name.str();
 }
 std::string logTail(const std::filesystem::path& path) {
     std::ifstream file(path, std::ios::binary);
@@ -52,6 +55,7 @@ std::string logTail(const std::filesystem::path& path) {
 }
 }
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
+    const auto dpi = bone_eater::enablePhysicalPixelDpi();
     bool noDialog = false;
     try {
         int count = 0;
@@ -61,11 +65,12 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
         try { for (int i = 1; i < count; ++i) args.emplace_back(raw[i]); }
         catch (...) { LocalFree(raw); throw; }
         LocalFree(raw);
-        bool dryRun = false, diagnose = false, help = false, closeGame = false;
+        bool dryRun = false, diagnose = false, help = false, closeGame = false, repair = false;
         std::filesystem::path report;
         for (std::size_t i = 0; i < args.size(); ++i) {
             if (args[i] == L"--dry-run") dryRun = true;
             else if (args[i] == L"--diagnose") diagnose = true;
+            else if (args[i] == L"--repair-calibration") repair = true;
             else if (args[i] == L"--close-game") closeGame = true;
             else if (args[i] == L"--no-dialog") noDialog = true;
             else if (args[i] == L"--help") help = true;
@@ -77,10 +82,13 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
                 "view: balanced125 (default) or closer150 (comparison).\nmain_dof_off: false (default) or true (experimental).\ninput_profile: null for cursor input, or an explicit game-relative/absolute profile.\n\n"
                 "Optional scope object: omit to preserve legacy controls. mode: legacy (default) or toggle_hold.\n"
                 "bindings: 1-8 distinct uppercase names; defaults [\"ENTER\",\"RBUTTON\"]. Supported: ENTER, SPACE, LBUTTON, RBUTTON, MBUTTON, XBUTTON1, XBUTTON2, A-Z, 0-9.\n"
+                "hold_release: exit (default, release closes scope) or lower (release to 2x).\n"
                 "hold_ms: integer 100-1000 (default 250). low_gain/high_gain: greater than 0 through 1 (defaults 0.25/0.10).\n"
                 "low_smoothing_ms/high_smoothing_ms: 0-250 (defaults 35/55). Values are experimental comfort tuning, not optical magnification.\n"
-                "toggle_hold: tap opens lower zoom; hold selects higher zoom; release returns lower; next tap closes.\n"
+                "toggle_hold: tap opens lower zoom; hold selects higher zoom; release follows hold_release (exit by default).\n"
                 "Example addition: \"scope\": {\"mode\":\"toggle_hold\",\"bindings\":[\"ENTER\",\"RBUTTON\"]}.\n\n"
+                "force_1080p: true (default), temporarily switches the primary display and restores on game exit.\n"
+                "--repair-calibration: back up and restore full-range calibration in user/conf, then exit.\n"
                 "--dry-run: validate launch choices and report arguments; starts no child.\n--report PATH: write the dry-run JSON report.\n--diagnose: run the game's file/profile check without gameplay.\n--close-game: request exit from exactly this workspace's registered game; never force kill.\n--no-dialog: write errors to inherited stdout only.\n\nNo execution-policy change or external loader is used.";
             output(text + "\n");
             if (!noDialog) MessageBoxW(nullptr, widen(text).c_str(), L"Play Bone Eater", MB_OK | MB_ICONINFORMATION);
@@ -89,6 +97,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
         if ((!report.empty() && !dryRun) || (dryRun && diagnose)) throw std::runtime_error("Use --report only with --dry-run; dry-run and diagnose are separate modes.");
         if (closeGame && (dryRun || diagnose || !report.empty()))
             throw std::runtime_error("--close-game is separate from dry-run, diagnose and report.");
+        if (repair && (dryRun || diagnose || closeGame || !report.empty()))
+            throw std::runtime_error("--repair-calibration is a separate mode.");
         const auto root = ownDirectory();
         if (closeGame) {
             // Do not parse launch settings or acquire the normal launch mutex:
@@ -130,14 +140,33 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
         // Repeat inside the launcher-instance guard; external direct launches
         // cannot be made atomic without cooperation from the game executable.
         if (!running.empty() || !matchingProcesses(game).empty()) throw std::runtime_error("This working game is already running. Close it before playing or checking files; no process was stopped.");
-        std::filesystem::create_directories(game.parent_path() / L"desktop");
-        if (!diagnose) prepareBetaCalibration(game);
-        const auto log = logPath(game);
+        if (!diagnose) {
+            preparePlayerData(game);
+            prepareBetaCalibration(game, repair);
+        }
+        if (repair) {
+            output("Full-range calibration repaired in user/conf; supplied game/conf was not changed.\n");
+            if (!noDialog) MessageBoxW(nullptr, L"Full-range calibration repaired. You can launch the game now.", L"Bone Eater", MB_OK);
+            return 0;
+        }
+        // Diagnose uses a separate log directory and never initializes or repairs settings.
+        if (diagnose) std::filesystem::create_directories(game.parent_path() / "desktop");
+        const auto log = diagnose ? game.parent_path() / "desktop" / logPath(game).filename() : logPath(game);
+        const auto displayLog = std::filesystem::path(log.wstring() + L".display.txt");
+        writeReport(displayLog, dpi + "\nforce_1080p=" + (settings.force1080p ? "true\n" : "false\n"));
+        auto logger = [&](const std::string& line) { std::ofstream f(displayLog, std::ios::app); f << line << '\n'; };
+        std::unique_ptr<DisplayBackend> backend;
+        std::unique_ptr<DisplaySession> display;
+        if (!diagnose && settings.force1080p) {
+            backend = primaryDisplayBackend();
+            display = std::make_unique<DisplaySession>(*backend, logger);
+        }
         const DWORD result = runChild(game, game.parent_path(), argv, environment, log);
+        if (display) display->restore();
         if (result != 0) {
             std::ostringstream text;
             text << "Bone Eater exited with code " << result << " (0x" << std::hex << result << ").\n\nStartup output: " << narrow(log.wstring())
-                 << "\nGame log: " << narrow((game.parent_path() / L"desktop/game.log").wstring()) << "\n\n" << logTail(log);
+                 << "\nGame log: " << narrow((playerDataDirectory(game) / L"game.log").wstring()) << "\n\n" << logTail(log);
             throw std::runtime_error(text.str());
         }
         if (diagnose) {

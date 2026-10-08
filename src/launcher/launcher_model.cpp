@@ -70,7 +70,7 @@ AdaptiveScopeSettings parseAdaptive(const rapidjson::Value& value, double lowGai
 }
 ScopeSettings parseScope(const rapidjson::Value& value) {
     if (!value.IsObject()) throw std::runtime_error("Scope setting must be an object.");
-    const std::array<std::string_view, 9> names {"shape", "mode", "bindings", "hold_ms", "low_gain", "high_gain", "low_smoothing_ms", "high_smoothing_ms", "adaptive"};
+    const std::array<std::string_view, 10> names {"hold_release", "shape", "mode", "bindings", "hold_ms", "low_gain", "high_gain", "low_smoothing_ms", "high_smoothing_ms", "adaptive"};
     for (auto item = value.MemberBegin(); item != value.MemberEnd(); ++item) {
         const std::string_view name(item->name.GetString(), item->name.GetStringLength());
         if (std::find(names.begin(), names.end(), name) == names.end()) throw std::runtime_error("Unknown scope setting.");
@@ -108,6 +108,13 @@ ScopeSettings parseScope(const rapidjson::Value& value) {
                 throw std::runtime_error("Duplicate scope binding.");
             result.bindings.push_back(name);
         }
+    }
+    if (value.HasMember("hold_release")) {
+        const auto& release = value["hold_release"];
+        if (!release.IsString()) throw std::runtime_error("Scope hold_release must be lower or exit.");
+        result.holdRelease.assign(release.GetString(), release.GetStringLength());
+        if (result.holdRelease != "lower" && result.holdRelease != "exit")
+            throw std::runtime_error("Scope hold_release must be lower or exit.");
     }
     if (value.HasMember("hold_ms")) {
         const auto& hold = value["hold_ms"];
@@ -166,7 +173,7 @@ Settings parseSettings(const std::string& text) {
     rapidjson::Document doc;
     doc.Parse<rapidjson::kParseValidateEncodingFlag>(text.data(), text.size());
     if (doc.HasParseError() || !doc.IsObject()) throw std::runtime_error("Launch settings must be a JSON object.");
-    const std::array<std::string_view, 5> names {"schema_version", "view", "main_dof_off", "input_profile", "scope"};
+    const std::array<std::string_view, 6> names {"schema_version", "view", "main_dof_off", "input_profile", "scope", "force_1080p"};
     for (auto item = doc.MemberBegin(); item != doc.MemberEnd(); ++item) {
         const std::string_view name(item->name.GetString(), item->name.GetStringLength());
         if (std::find(names.begin(), names.end(), name) == names.end()) throw std::runtime_error("Unknown launch setting.");
@@ -174,7 +181,7 @@ Settings parseSettings(const std::string& text) {
             if (name == std::string_view(old->name.GetString(), old->name.GetStringLength()))
                 throw std::runtime_error("Duplicate launch setting.");
     }
-    for (auto name : names) if (name != "scope" && !doc.HasMember(name.data())) throw std::runtime_error("Missing launch setting.");
+    for (auto name : names) if (name != "scope" && name != "force_1080p" && !doc.HasMember(name.data())) throw std::runtime_error("Missing launch setting.");
     if (!doc["schema_version"].IsInt() || doc["schema_version"].GetInt() != 1)
         throw std::runtime_error("Unsupported launch settings schema; expected 1.");
     if (!doc["view"].IsString() || !doc["main_dof_off"].IsBool()) throw std::runtime_error("Invalid launch view or DOF setting type.");
@@ -183,6 +190,10 @@ Settings parseSettings(const std::string& text) {
     if (result.view != "balanced125" && result.view != "closer150")
         throw std::runtime_error("View must be balanced125 or closer150.");
     result.mainDofOff = doc["main_dof_off"].GetBool();
+    if (doc.HasMember("force_1080p")) {
+        if (!doc["force_1080p"].IsBool()) throw std::runtime_error("force_1080p must be true or false.");
+        result.force1080p = doc["force_1080p"].GetBool();
+    }
     const auto& profile = doc["input_profile"];
     if (!profile.IsNull()) {
         if (!profile.IsString() || !profile.GetStringLength() || profile.GetStringLength() > 4096)
@@ -219,6 +230,7 @@ std::vector<std::wstring> arguments(const Settings& settings, bool diagnose) {
             for (const auto& key : scope.bindings) { if (!bindings.empty()) bindings += ','; bindings += key; }
             result.insert(result.end(), {L"--scope-mode", widen(scope.mode), L"--scope-bindings", widen(bindings),
                 L"--scope-shape", std::wstring(scope.shape.begin(), scope.shape.end()),
+                L"--scope-hold-release", widen(scope.holdRelease),
                 L"--scope-hold-ms", std::to_wstring(scope.holdMs), L"--scope-low-gain", decimal(scope.lowGain),
                 L"--scope-high-gain", decimal(scope.highGain), L"--scope-low-smoothing-ms", decimal(scope.lowSmoothingMs),
                 L"--scope-high-smoothing-ms", decimal(scope.highSmoothingMs)});
@@ -314,6 +326,7 @@ std::string dryRunReport(const std::filesystem::path& executable, const std::fil
     string("settings_file", settingsFile.wstring()); string("command_line", commandLine(argv));
     out.Key("argv"); out.StartArray(); for (const auto& arg : argv) { const auto encoded = narrow(arg); out.String(encoded.data(), static_cast<rapidjson::SizeType>(encoded.size())); } out.EndArray();
     out.Key("view"); out.String(settings.view.c_str()); out.Key("main_dof_off"); out.Bool(settings.mainDofOff);
+    out.Key("force_1080p"); out.Bool(settings.force1080p);
     out.Key("scope");
     if (!settings.scope) out.Null();
     else {
@@ -322,6 +335,7 @@ std::string dryRunReport(const std::filesystem::path& executable, const std::fil
         out.Key("mode"); out.String(scope.mode.c_str());
         out.Key("bindings"); out.StartArray(); for (const auto& key : scope.bindings) out.String(key.c_str()); out.EndArray();
         out.Key("hold_ms"); out.Uint(scope.holdMs);
+        out.Key("hold_release"); out.String(scope.holdRelease.c_str());
         out.Key("low_gain"); out.Double(scope.lowGain); out.Key("high_gain"); out.Double(scope.highGain);
         out.Key("low_smoothing_ms"); out.Double(scope.lowSmoothingMs); out.Key("high_smoothing_ms"); out.Double(scope.highSmoothingMs);
         out.Key("shape"); out.String(scope.shape.c_str());

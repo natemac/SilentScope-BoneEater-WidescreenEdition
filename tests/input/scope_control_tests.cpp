@@ -10,10 +10,11 @@
 using namespace bone_eater::input;
 
 int main() {
+    assert(ScopeControlConfig{}.exitOnHoldRelease);
     ScopeControl scope;
     auto step = [&](std::uint64_t tick, bool held, bool usable = true,
                     std::uint64_t context = 1) {
-        return scope.update({tick, context, held, usable, 0x1000, 0x2000});
+        return scope.update({tick, context, held, usable, 0x1000, 0x2000}, {250, false});
     };
     // Held-at-start is ignored until a neutral sample arrives.
     assert(!step(0, true).armed);
@@ -97,6 +98,35 @@ int main() {
     custom.reset();
     assert(!custom.read().enabled && !custom.read().armed);
 
+    // Both release policies preserve taps; holds work from off and latched 2x.
+    for (const bool exitOnRelease : {false, true}) {
+        for (const bool startOpen : {false, true}) {
+            for (const bool delayedRelease : {false, true}) {
+                ScopeControl choice;
+                const ScopeControlConfig config{250, exitOnRelease};
+                auto tick = [&](std::uint64_t at, bool held, bool usable = true) {
+                    return choice.update({at, 1, held, usable, 0x1000, 0x2000}, config);
+                };
+                tick(0, false);
+                if (startOpen) { tick(10, true); assert(tick(20, false).enabled); }
+                tick(30, true);
+                assert(!tick(279, true).higher);
+                if (!delayedRelease) assert(tick(280, true).higher);
+                auto released = tick(280, false); // Exact threshold, including no high frame.
+                assert(released.enabled == !exitOnRelease && !released.higher);
+                assert(tick(281, false).enabled == !exitOnRelease);
+                tick(290, true);
+                assert(tick(300, false).enabled == exitOnRelease); // Tap toggles either way.
+                tick(310, true);
+                assert(!tick(320, true, false).enabled); // Focus loss still closes.
+                assert(!tick(330, true).armed);
+                assert(tick(340, false).armed);
+                tick(350, true);
+                assert(tick(360, false).enabled); // Clean re-entry.
+            }
+        }
+    }
+
     // Physical playtest establishes native0=stronger, native1=lower. The native
     // optical scalar is not a magnification label. Logical gains stay unchanged.
     assert(scopeZoomNeedsEdge(false, 0));
@@ -118,7 +148,7 @@ int main() {
     for (const auto initialNativeMode : {0u, 1u}) {
         ScopeControl gestures;
         auto input = [&](std::uint64_t at, bool held) {
-            return gestures.update({at, 1, held, true, 0x1000, 0x2000});
+            return gestures.update({at, 1, held, true, 0x1000, 0x2000}, {250, false});
         };
         input(1000, false);
         auto intent = input(1010, true);
@@ -142,9 +172,11 @@ int main() {
     // Launcher/runtime flags use the Win32 environment, not the CRT snapshot.
     assert(SetEnvironmentVariableA("BONE_EATER_SCOPE_MODE", "toggle_hold"));
     assert(SetEnvironmentVariableA("BONE_EATER_SCOPE_HOLD_MS", "100"));
+    assert(SetEnvironmentVariableA("BONE_EATER_SCOPE_HOLD_RELEASE", nullptr));
 #else
     assert(setenv("BONE_EATER_SCOPE_MODE", "toggle_hold", 1) == 0);
     assert(setenv("BONE_EATER_SCOPE_HOLD_MS", "100", 1) == 0);
+    assert(unsetenv("BONE_EATER_SCOPE_HOLD_RELEASE") == 0);
 #endif
     initializeScopeControlFromEnvironment();
     assert(scopeControlRequested());
@@ -152,6 +184,7 @@ int main() {
     assert(publishScopeControl({1, 1, true, true, 0x10, 0x20}).enabled);
     assert(publishScopeControl({101, 1, true, true, 0x10, 0x20}).higher);
     assert(readScopeControlSnapshot().nativeScopeOwner == 0x10);
+    assert(!publishScopeControl({102, 1, false, true, 0x10, 0x20}).enabled);
     resetScopeControl();
     assert(!readScopeControlSnapshot().enabled && !readScopeControlSnapshot().armed);
     std::cout << "scope control transitions passed\n";

@@ -20,6 +20,7 @@
 #include "input/scope_settings.h"
 #include "standalone/input_profile.h"
 #include "diagnostics/output_policy.h"
+#include "platform/dpi.h"
 
 int main_implementation(int argc, char *argv[]);
 
@@ -83,7 +84,7 @@ bool preflight(const std::filesystem::path &root) {
             ready = false;
         }
     }
-    for (const auto *relative : {"data", "arkdata", "conf"}) {
+    for (const auto *relative : {"data", "arkdata"}) {
         if (!std::filesystem::is_directory(root / relative)) {
             std::cerr << "Missing required game directory: " << relative << '\n';
             ready = false;
@@ -94,6 +95,7 @@ bool preflight(const std::filesystem::path &root) {
 }
 
 int main(int argc, char **argv) {
+    std::cout << bone_eater::enablePhysicalPixelDpi() << std::endl;
     try {
         bool diagnose = false;
         bool originalLayout = false;
@@ -413,7 +415,10 @@ int main(int argc, char **argv) {
         // native NDD attach starts a requested selected reader later.
         bone_eater::input::initializeSelectedHidBridge(std::move(inputConfiguration));
         std::filesystem::create_directories(root / "desktop");
-        prepare_default_controls(root / "desktop/bone-eater-controls.xml");
+        const auto user = root.parent_path() / "user";
+        if (!originalLayout && !std::filesystem::is_regular_file(user / "avs-config.xml"))
+            throw std::runtime_error("Launch Bone Eater WS-Edition.exe first to prepare isolated user settings.");
+        prepare_default_controls(originalLayout ? root / "desktop/bone-eater-controls.xml" : user / "bone-eater-controls.xml");
         // Until the final single-screen compositor is ready, keep all original
         // camera outputs readable on a desktop without changing their projection.
         if (originalLayout) SetEnvironmentVariableW(L"BONE_EATER_LAYOUT", L"off");
@@ -432,6 +437,10 @@ int main(int argc, char **argv) {
         arguments.insert(arguments.end(), forwarded.begin(), forwarded.end());
         // Upstream keeps the FIRST occurrence of scalar options. User options
         // precede defaults so explicit diagnostic paths/options take effect.
+        if (!originalLayout) {
+            arguments.insert(arguments.end(), {"-v", "../user/avs-config.xml", "-cfgpath", "../user/bone-eater-controls.xml",
+                "-resizecfgpath", "../user/resize.json", "-patchcfgpath", "../user/patches.json", "-y", "../user/game.log"});
+        }
         const std::vector<std::string> defaults = {
             "-runas", "user", "-ea", "-w", "-cfgpath", "desktop/bone-eater-controls.xml",
             "-resizecfgpath", "desktop/resize.json", "-patchcfgpath", "desktop/patches.json",

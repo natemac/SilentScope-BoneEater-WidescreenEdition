@@ -9,7 +9,7 @@ int main() {
     auto poll = [&](std::uint64_t time, std::uint32_t asyncHeld = 0,
                     bool usable = true, std::uint64_t context = 1) {
         return events.consume({time, context, false, usable, 0x10, 0x20}, asyncHeld,
-            [&](const ScopeControlInput& input) noexcept { return control.update(input); });
+            [&](const ScopeControlInput& input) noexcept { return control.update(input, {250, false}); });
     };
     assert(poll(0).armed);
     // Complete tap between two game polls must not disappear.

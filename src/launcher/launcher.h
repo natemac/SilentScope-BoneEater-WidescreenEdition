@@ -22,6 +22,7 @@ struct ScopeSettings {
     std::string mode = "legacy";
     std::vector<std::string> bindings {"ENTER", "RBUTTON"};
     unsigned holdMs = 250;
+    std::string holdRelease = "exit";
     double lowGain = 0.25;
     double highGain = 0.10;
     double lowSmoothingMs = 35;
@@ -31,6 +32,7 @@ struct ScopeSettings {
 struct Settings {
     std::string view = "balanced125";
     bool mainDofOff = false;
+    bool force1080p = true;
     std::wstring inputProfile;
     std::optional<ScopeSettings> scope;
 };

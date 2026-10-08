@@ -3,7 +3,7 @@
 
 namespace bone_eater::input {
 
-struct ScopeControlConfig { std::uint32_t holdMs = 250; };
+struct ScopeControlConfig { std::uint32_t holdMs = 250; bool exitOnHoldRelease = true; };
 struct ScopeControlInput {
     std::uint64_t nowMs = 0;
     // Caller owns source, focus and game-context validation. A changed identity

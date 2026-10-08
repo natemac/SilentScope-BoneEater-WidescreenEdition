@@ -5,3 +5,6 @@
 *.dmp
 __pycache__/
 *.pyc
+
+/user/
+/user.setup/

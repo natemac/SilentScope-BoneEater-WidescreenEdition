@@ -91,6 +91,7 @@ inline const char* scopeEnvironmentName(const std::string& flag) {
     if (flag == "--scope-shape") return "BONE_EATER_SCOPE_SHAPE";
     if (flag == "--scope-mode") return "BONE_EATER_SCOPE_MODE";
     if (flag == "--scope-bindings") return "BONE_EATER_SCOPE_BINDINGS";
+    if (flag == "--scope-hold-release") return "BONE_EATER_SCOPE_HOLD_RELEASE";
     if (flag == "--scope-hold-ms") return "BONE_EATER_SCOPE_HOLD_MS";
     if (flag == "--scope-low-gain") return "BONE_EATER_SCOPE_LOW_GAIN";
     if (flag == "--scope-high-gain") return "BONE_EATER_SCOPE_HIGH_GAIN";
@@ -114,6 +115,8 @@ inline void validateScopeOption(const std::string& flag, const std::string& valu
         if (value != "circle" && value != "angled") throw std::runtime_error("Scope shape must be circle or angled.");
     } else if (flag == "--scope-mode") {
         if (value != "legacy" && value != "toggle_hold") throw std::runtime_error("Scope mode must be legacy or toggle_hold.");
+    } else if (flag == "--scope-hold-release") {
+        if (value != "lower" && value != "exit") throw std::runtime_error("Scope hold_release must be lower or exit.");
     } else if (flag == "--scope-bindings") (void)parseScopeBindings(value);
     else if (flag == "--scope-hold-ms") (void)scopeNumber(value, 100, 1000, true);
     else if (flag == "--scope-adaptive-enabled" || flag == "--scope-adaptive-edge-enabled") {

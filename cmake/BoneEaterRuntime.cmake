@@ -7,6 +7,7 @@ function(bone_eater_configure_runtime)
         APPEND PROPERTY COMPILE_DEFINITIONS "main=bone_eater_unused_upstream_entry")
     target_sources(spicetools_spice64 PRIVATE
         "${bone_root}/src/standalone/main.cpp"
+        "${bone_root}/src/platform/private_storage.cpp"
         "${bone_root}/src/input/aim_state.cpp"
         "${bone_root}/src/input/scope_control.cpp"
         "${bone_root}/src/input/scope_button_events.cpp"

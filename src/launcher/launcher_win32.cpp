@@ -53,7 +53,7 @@ std::filesystem::path verifiedGameExecutable(const std::filesystem::path& root) 
 std::filesystem::path verifiedGame(const std::filesystem::path& root) {
     const auto actual = verifiedGameExecutable(root);
     for (const auto* relative : {L"modules/gamendd.dll", L"modules/arkndd.dll", L"prop/avs-config.xml"})
-        if (!std::filesystem::is_regular_file(actual.parent_path() / relative)) throw std::runtime_error("Missing original game file: " + narrow(relative) + ". Copy your original arkdata, conf, data, modules and prop folders beside BoneEater.exe in the game folder. Keep a backup of your originals; see README.md for setup.");
+        if (!std::filesystem::is_regular_file(actual.parent_path() / relative)) throw std::runtime_error("Missing original game file: " + narrow(relative) + ". Copy your original arkdata, data, modules and prop folders (conf is optional) beside BoneEater.exe in the game folder. Keep a backup of your originals; see README.md for setup.");
     return actual;
 }
 std::vector<DWORD> matchingProcesses(const std::filesystem::path& executable) {

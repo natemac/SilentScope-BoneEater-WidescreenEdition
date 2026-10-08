@@ -42,7 +42,8 @@ ScopeControlSnapshot ScopeControl::update(const ScopeControlInput& input,
     if (!input.buttonsHeld && state_.buttonsHeld) {
         // A release after a scheduling gap is still a hold if elapsed time
         // crossed the threshold, even without an intervening high-zoom sample.
-        if (!openingPress_ && !heldLong) state_.enabled = false;
+        if ((!openingPress_ && !heldLong) || (heldLong && config.exitOnHoldRelease))
+            state_.enabled = false;
         state_.higher = false;
         openingPress_ = false;
     }
@@ -72,7 +73,9 @@ struct Shared {
     ScopeControlConfig config;
     bool requested = false;
     Shared() {
-        char mode[32] {}, hold[32] {};
+        char mode[32] {}, hold[32] {}, release[32] {};
+        if (environment("BONE_EATER_SCOPE_HOLD_RELEASE", release, sizeof(release)))
+            config.exitOnHoldRelease = std::strcmp(release, "lower") != 0;
         requested = environment("BONE_EATER_SCOPE_MODE", mode, sizeof(mode)) &&
             std::strcmp(mode, "toggle_hold") == 0;
         if (environment("BONE_EATER_SCOPE_HOLD_MS", hold, sizeof(hold))) {

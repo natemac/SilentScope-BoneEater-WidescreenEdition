@@ -17,6 +17,7 @@
 #include "render/native_rear_hud.h"
 #include "render/native_reticle.h"
 #include "render/scope_compositor.h"
+#include "platform/private_storage.h"
 #endif
 
 namespace games::silentscope {
@@ -30,6 +31,7 @@ namespace games::silentscope {
         // load the game DLL so hooks apply
         libutils::try_library("gamendd.dll");
 #ifdef BONE_EATER_STANDALONE
+        bone_eater::installPrivateBookkeeping(GetModuleHandleW(L"arkndd.dll"));
         // No config means Legacy. A failed selected open remains selected and
         // disarmed; it cannot silently switch to cursor/API gun input.
         const auto selected_start = bone_eater::input::startSelectedHidBridge();

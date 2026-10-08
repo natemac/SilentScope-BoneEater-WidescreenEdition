@@ -89,6 +89,21 @@ int wmain(int argc, wchar_t** argv) {
         require(scopedReport.find("\"scope\":{\"mode\":\"toggle_hold\",\"bindings\":[\"ENTER\",\"RBUTTON\"]") != std::string::npos
             && scopedReport.find("\"child_started\":false") != std::string::npos, "Dry run describes resolved scope choices without executing them");
         ++cases;
+        require(scoped.scope->holdRelease == "exit", "Omitted hold_release defaults to exit");
+        require(flagValue(scopedArgs, L"--scope-hold-release") == L"exit", "Default release transported");
+        const auto lowerRelease = parseSettings(scopeJson(R"({"mode":"toggle_hold","hold_release":"lower"})"));
+        require(flagValue(arguments(lowerRelease, false), L"--scope-hold-release") == L"lower", "Explicit lower policy retained");
+        const auto exitRelease = parseSettings(scopeJson(R"({"mode":"toggle_hold","hold_release":"exit"})"));
+        require(exitRelease.scope->holdRelease == "exit", "Exit release parsed");
+        require(flagValue(arguments(exitRelease, false), L"--scope-hold-release") == L"exit", "Exit release transported");
+        const auto exitReport = dryRunReport(L"C:\\fixture\\BoneEater.exe", L"C:\\fixture\\settings.json", exitRelease, arguments(exitRelease, false), isolateEnvironment({}), {});
+        require(exitReport.find("\"hold_release\":\"exit\"") != std::string::npos, "Release policy reported");
+        require(std::string(bone_eater::input::scopeEnvironmentName("--scope-hold-release")) == "BONE_EATER_SCOPE_HOLD_RELEASE", "Release environment transport");
+        for (const auto* policy : {"lower", "exit"}) bone_eater::input::validateScopeOption("--scope-hold-release", policy);
+        rejects([&] { bone_eater::input::validateScopeOption("--scope-hold-release", "other"); });
+        for (const auto* bad : {R"({"hold_release":2})", R"({"hold_release":true})", R"({"hold_release":"other"})", R"({"hold_release":"exit\u0000"})", R"({"hold_release":"exit","hold_release":"lower"})"})
+            rejects([&] { parseSettings(scopeJson(bad)); });
+        ++cases;
         const auto adaptive = parseSettings(scopeJson(R"({"mode":"toggle_hold","adaptive":{"enabled":true,"low_max_gain":1.25,"high_max_gain":0.8,"speed_start":0.2,"speed_full":0.9,"ramp_up_ms":110,"ramp_down_ms":150,"edge_pan":{"enabled":true,"band":0.05,"dwell_ms":220,"max_speed":0.3}}})"));
         require(adaptive.scope && adaptive.scope->adaptive && adaptive.scope->adaptive->enabled &&
             adaptive.scope->adaptive->edgePanEnabled && adaptive.scope->adaptive->lowMaxGain == 1.25 &&
