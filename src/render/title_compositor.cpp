@@ -259,7 +259,7 @@ bool loadPrompt(Gpu& g) {
     font=CreateFontW(28,0,0,0,FW_SEMIBOLD,FALSE,FALSE,FALSE,DEFAULT_CHARSET,OUT_DEFAULT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,DEFAULT_PITCH,L"Segoe UI");
     if(!font){SelectObject(dc,previous);DeleteObject(bitmap);DeleteDC(dc);return false;}
     oldFont=SelectObject(dc,font);rect={0,150,int(w),200};
-    DrawTextW(dc,L"BUILD 20261007.3",-1,&rect,DT_LEFT|DT_SINGLELINE|DT_VCENTER);
+    DrawTextW(dc,L"BUILD 20261008.1",-1,&rect,DT_LEFT|DT_SINGLELINE|DT_VCENTER);
     SelectObject(dc,oldFont);DeleteObject(font);
     GdiFlush();bool okay=texture(g,w,h,bits,g.prompt);
     SelectObject(dc,previous);DeleteObject(bitmap);DeleteDC(dc);return okay;

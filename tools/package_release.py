@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,json,zipfile
 ROOT=Path(__file__).resolve().parents[1]
-BUILD="20261007.3"
+BUILD="20261008.1"
 def digest(b): return hashlib.sha256(b).hexdigest()
 def main():
     payload={

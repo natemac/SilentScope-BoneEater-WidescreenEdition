@@ -26,6 +26,6 @@ The runtime output is `build/runtime/spicetools/64/Release/BoneEater.exe`; launc
 
 The original game's supported module hashes are recorded in `SUPPORTED_GAME.json`. This beta was developed against those versions; other revisions have not been validated.
 
-BUILD 20261007.3 is a beta release. Five launcher suites cover settings/calibration/migration/display recovery; input has 12 suites and rendering has 35. The user confirmed affected Sinden aiming and display switching/restoration beyond the Denon setup; other hardware combinations remain unverified. The launcher and runtime must be deployed together because both participate in the private user-data layout.
+BUILD 20261008.1 is a beta release. Five launcher suites cover settings/calibration/migration/display recovery; input has 12 suites and rendering has 35. The user confirmed affected Sinden aiming and display switching/restoration beyond the Denon setup; other hardware combinations remain unverified. The launcher and runtime must be deployed together because both participate in the private user-data layout.
 
 Manual display diagnostic: build/launcher/Release/display_probe.exe reads actual active source/target timings. --test-1080p-scaled-session exercises the current launcher policy (1080p desktop, retained output timing) for ten seconds then restores without starting the game. --test-1080p and --test-1080p-59 deliberately exercise the older native-signal switch; --list-modes is read-only. Run with the game closed. Desktop API success cannot establish physical receiver/display visibility.

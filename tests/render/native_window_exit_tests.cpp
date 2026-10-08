@@ -52,6 +52,7 @@ void drain() {
 }
 LRESULT CALLBACK windowProc(HWND window, UINT message, WPARAM wparam, LPARAM lparam) {
     if (message == WM_CLOSE) { ++nativeCloses; return 73; }
+    if (message == WM_KEYDOWN || message == WM_KEYUP) return 92;
     if (message == WM_APP + 1) return 91;
     return DefWindowProcW(window, message, wparam, lparam);
 }
@@ -97,6 +98,25 @@ int main() {
         WNDCLASSW type {}; type.lpfnWndProc = fixture::windowProc;
         type.hInstance = GetModuleHandleW(nullptr); type.lpszClassName = L"AskaWnd";
         CHECK(RegisterClassW(&type));
+        { resetFixture(); Window main, auxiliary(L"Aska MultiDisplay[0](multipssID:33)");
+          CHECK(installNativeMainWindowExit(main.value, fixture::shutdown));
+          CHECK(SendMessageW(auxiliary.value, WM_KEYDOWN, VK_ESCAPE, 0) == 92);
+          CHECK(SendMessageW(main.value, WM_KEYDOWN, VK_RETURN, 0) == 92);
+          CHECK(fixture::queueCalls == 0);
+          CHECK(SendMessageW(main.value, WM_KEYDOWN, VK_ESCAPE, 0) == 0);
+          CHECK(SendMessageW(main.value, WM_KEYDOWN, VK_ESCAPE, 1LL << 30) == 0);
+          CHECK(SendMessageW(main.value, WM_KEYUP, VK_ESCAPE, 0) == 0);
+          CHECK(SendMessageW(main.value, WM_CLOSE, 0, 0) == 0);
+          CHECK(fixture::queueCalls == 1 && fixture::nativeCloses == 0);
+          fixture::drain(); CHECK(fixture::shutdownCalls == 1); ++cases; }
+        { resetFixture(); Window main;
+          CHECK(installNativeMainWindowExit(main.value, fixture::shutdown));
+          fixture::failQueue = true;
+          CHECK(SendMessageW(main.value, WM_KEYDOWN, VK_ESCAPE, 0) == 73);
+          CHECK(!shutdownRequested.load() && fixture::nativeCloses == 1);
+          fixture::failQueue = false;
+          CHECK(SendMessageW(main.value, WM_KEYDOWN, VK_ESCAPE, 0) == 0);
+          fixture::drain(); CHECK(fixture::shutdownCalls == 1); ++cases; }
         { resetFixture(); Window main;
           CHECK(installNativeMainWindowExit(main.value, fixture::shutdown));
           CHECK(installNativeMainWindowExit(main.value, fixture::shutdown));

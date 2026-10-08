@@ -52,10 +52,22 @@ LRESULT CALLBACK mainWindowSubclass(HWND window, UINT message, WPARAM wparam,
             binding->ownerThread != GetCurrentThreadId())
         return DefSubclassProc(window, message, wparam, lparam);
 
-    // Observe input only from our verified current main window. All messages
-    // continue through the native handler; scope routing never steals UI input.
+    // Observe input only from our verified current main window. Scope routing
+    // never steals UI input; Escape below is reserved for graceful exit.
     if (activeBinding.load() == binding)
         input::observeScopeButtonMessage(window, message, wparam, lparam);
+
+    // Keep Escape on the same teardown path as Alt+F4. Only the registered
+    // main window handles it; no global keyboard hook or auxiliary-window rule.
+    // The existing shutdown latch also absorbs key auto-repeat.
+    if (activeBinding.load() == binding && wparam == VK_ESCAPE) {
+        if (message == WM_KEYUP) return 0;
+        if (message == WM_KEYDOWN) {
+            message = WM_CLOSE;
+            wparam = 0;
+            lparam = 0;
+        }
+    }
 
     if (message == WM_NCDESTROY) {
         if (reinterpret_cast<UINT_PTR>(GetPropW(window, window_exit_protocol::property)) == binding->cookie)

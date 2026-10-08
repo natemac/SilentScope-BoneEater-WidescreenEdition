@@ -5,5 +5,5 @@
     "source": "vendor/spice2x/src/spice2x",
     "state": "vendored with integration changes already applied; do not reapply patches"
   },
-  "build": "20261007.3"
+  "build": "20261008.1"
 }

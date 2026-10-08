@@ -1,4 +1,13 @@
-# BUILD 20261007.3 — beta release
+# BUILD 20261008.1 — beta release
+
+## New in this build
+
+- Press **Escape** while the game has focus to exit through the existing graceful shutdown path, just like Alt+F4. The launcher then restores the captured display configuration. No JSON setting is required.
+- Held/repeated Escape presses queue shutdown only once. Other keys and auxiliary windows retain their existing handling.
+- This release retains the public October 7 gameplay, input and display fixes below. The separate local English-audio experiment is not included.
+- Verification: automated inert-window exit tests and the render, input and launcher suites. Live gameplay Escape and display restoration still require confirmation on this build.
+
+## Changes retained from BUILD 20261007.3
 
 ## Bug fixes
 
